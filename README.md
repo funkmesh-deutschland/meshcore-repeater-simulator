@@ -13,6 +13,10 @@ berechnet die Abdeckung:
 Läuft lokal unter **Linux und Windows**, nutzt eine **NVIDIA-GPU** (CUDA) und rechnet ohne GPU auf allen
 CPU-Kernen.
 
+![Linkreserve aller Repeater im Kreis Coesfeld](docs/screenshots/abdeckung.jpg)
+*Linkreserve (schwächere Richtung von Down- und Uplink über der LoRa-Empfindlichkeit) für 117 Repeater
+im Kreis Coesfeld, 10-m-Raster.*
+
 ## Funktionen
 
 * **Gebiete** (Reiter „Gebiet“): Kreis/Stadt/Bundesland suchen (Grenze von OpenStreetMap), Rechteck
@@ -49,6 +53,15 @@ CPU-Kernen.
 * **Kalibrierung mit eigenen Messungen**: Messdateien (CSV/JSON der Mapper-App oder eigene CSV)
   einfach in den Reiter ziehen – mehrere Dateien werden gesammelt, gemeinsam ausgewertet und das
   Modell wird automatisch angepasst, wenn das Ergebnis plausibel ist.
+
+### Bilder
+
+| | |
+|---|---|
+| ![Gebiet wählen: ganz Deutschland mit Abschätzung und Warnung](docs/screenshots/gebiet-deutschland.jpg) | ![Repeater-Import von map.meshcore.io und mapme.sh](docs/screenshots/import.jpg) |
+| **Gebiet wählen** – hier ganz Deutschland, mit Abschätzung von Daten, Platz und Rechenzeit | **Import** von map.meshcore.io und mapme.sh, nach Public Key zusammengeführt |
+| ![Punktabfrage auf Straßenebene](docs/screenshots/strassenzuege.jpg) | ![Höhenprofil Repeater zu Punkt](docs/screenshots/hoehenprofil.jpg) |
+| **Punktabfrage** auf Straßenebene: Pegel und Reserve aller hörbaren Repeater | **Höhenprofil** mit Gelände, LoD2-Gebäuden, Bewuchs, Sichtlinie und Fresnelzone |
 
 ## Installation
 
@@ -129,6 +142,8 @@ Arbeitsverzeichnis für Daten, Caches und Projekte ist `./data` (über `FUNKMESH
   Paketen zu 1000 Strecken gerechnet.
 
 ## Mess-App „Funkmesh Mapper“ (PWA fürs Tablet)
+
+![Funkmesh Mapper auf dem Tablet](docs/screenshots/mapper.jpg)
 
 Ordner `funkmesh_sim/mapper/` (Submodul, eigenes Repo, veröffentlicht unter
 <https://funkmesh-deutschland.github.io/meshcore-mapper/>); der Simulator liefert sie zusätzlich unter `/mapper/` aus. Die App ist rein
