@@ -1,0 +1,3 @@
+[submodule "funkmesh_sim/mapper"]
+	path = funkmesh_sim/mapper
+	url = https://github.com/funkmesh-deutschland/meshcore-mapper.git

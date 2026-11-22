@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repeater-Simulator · Funkmesh Deutschland</title>
+<link rel="icon" href="/static/bildmarke-hell.svg">
+<link rel="stylesheet" href="/static/vendor/leaflet.css">
+<link rel="stylesheet" href="/static/style.css?v=5">
+</head>
+<body>
+<aside id="side">
+  <header class="brand">
+    <img src="/static/logo-hell.svg" alt="Funkmesh Deutschland" class="logo">
+    <div>
+      <div class="title">Repeater-Simulator</div>
+      <div class="sub" id="sub">Funkabdeckung MeshCore · 868 MHz</div>
+      <button class="area-pill" id="area-pill" title="Gebiet wechseln oder neu anlegen">Kein Gebiet</button>
+    </div>
+  </header>
+  <nav class="tabs">
+    <button data-tab="area">Gebiet</button>
+    <button data-tab="rep" class="active">Repeater</button>
+    <button data-tab="calc">Berechnung</button>
+    <button data-tab="load">Auslastung</button>
+    <button data-tab="cal">Kalibrierung</button>
+    <button data-tab="set">Parameter</button>
+    <button data-tab="info">Modell</button>
+  </nav>
+
+  <section class="tab" id="tab-area" hidden>
+    <div class="card">
+      <h3>Gebiete</h3>
+      <div id="area-list" class="list"></div>
+      <div class="hint">Jedes Gebiet hat eigene Geodaten, Repeater, Ergebnisse und Kalibrierung. Ein neues Gebiet übernimmt Parameter und die darin liegenden Repeater des aktiven Gebiets.</div>
+    </div>
+    <div class="card">
+      <h3>Neues Gebiet</h3>
+      <label class="small">Kreis, Stadt oder Bundesland suchen
+        <div class="row gap"><input id="ar-q" placeholder="z. B. Kreis Borken, Münster, Niedersachsen" style="flex:1"><button class="btn" id="ar-search">Suchen</button></div></label>
+      <div id="ar-results" class="list"></div>
+      <div class="row gap" style="margin-top:6px">
+        <button class="btn" id="ar-draw">▭ Rechteck zeichnen</button>
+        <button class="btn" id="ar-view">Kartenausschnitt</button>
+        <button class="btn" id="ar-de">Ganz Deutschland</button>
+      </div>
+      <p class="hint" id="ar-draw-hint" hidden>Mit gedrückter Maustaste ein Rechteck in die Karte ziehen. <kbd>Esc</kbd> bricht ab.</p>
+      <div class="form two" style="margin-top:8px">
+        <label>Name<input id="ar-title" placeholder="Name des Gebiets"></label>
+        <label>Rasterweite<select id="ar-res">
+          <option value="5">5 m – Straßenzüge (nur NRW sinnvoll)</option><option value="10" selected>10 m – Ort/Kreis</option>
+          <option value="25">25 m – Region</option><option value="50">50 m – Bundesland/Deutschland</option><option value="100">100 m – Übersicht</option></select></label>
+        <label>Rand um das Gebiet [km]<input id="ar-buf" type="number" value="5" min="0" max="30" step="1"></label>
+        <label>Gebäudehöhe ohne Angabe [m]<input id="ar-bh" type="number" value="9" min="3" max="30" step="0.5"></label>
+        <label class="check"><input type="checkbox" id="ar-nrw" checked> NRW-Laserdaten + LoD2 nutzen</label>
+        <label class="check"><input type="checkbox" id="ar-osm" checked> OSM-Gebäude (≤ 10 m, ≤ 4000 km²)</label>
+      </div>
+      <div id="ar-est" class="est"></div>
+      <div class="row gap"><button class="btn primary" id="ar-go" disabled>Gebiet vorbereiten</button><button class="btn" id="ar-clear">Auswahl verwerfen</button></div>
+    </div>
+    <div class="card" id="ar-job" hidden>
+      <div class="row between"><h3 id="ar-job-title">Gebiet wird vorbereitet</h3><button class="btn small" id="ar-stop">Anhalten</button></div>
+      <div class="progress"><div id="ar-prog"></div></div>
+      <div class="hint" id="ar-job-msg"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-rep">
+    <div class="card">
+      <div class="row gap">
+        <button id="btn-place" class="btn primary">＋ Repeater setzen</button>
+        <button id="btn-import" class="btn">Importieren (meshcore.io / mapme.sh)</button>
+      </div>
+      <p class="hint" id="place-hint" hidden>Klicke in die Karte, um den Repeater zu platzieren. <kbd>Esc</kbd> bricht ab.</p>
+    </div>
+    <div class="card" id="import-box" hidden>
+      <div class="row between"><h3>Repeater importieren</h3><button class="x" id="import-close">×</button></div>
+      <div class="row gap small">
+        <label>Quelle <select id="imp-src"><option value="both">map.meshcore.io + mapme.sh</option><option value="meshcore">nur map.meshcore.io</option><option value="mapme">nur mapme.sh</option></select></label>
+        <label>Max. Alter <input type="number" id="imp-age" value="30" min="1" style="width:4.5em"> Tage</label>
+        <label>Höhe <input type="number" id="imp-h" value="10" step="0.5" style="width:4em"> m</label>
+        <button class="btn" id="imp-load">Laden</button>
+      </div>
+      <div class="row gap small" id="imp-sel" hidden><button class="btn small" id="imp-all">alle</button><button class="btn small" id="imp-none">keine</button><span class="hint" id="imp-count"></span></div>
+      <div id="imp-list" class="list"></div>
+      <div class="row gap"><button class="btn primary" id="imp-do" disabled>Auswahl übernehmen</button><span class="hint" id="imp-info"></span></div>
+    </div>
+    <div class="card" id="editor" hidden>
+      <div class="row between"><h3>Repeater bearbeiten</h3><button class="x" id="ed-close">×</button></div>
+      <div class="form">
+        <label>Name<input id="ed-name"></label>
+        <label>Antennenhöhe über Grund [m]<input id="ed-height" type="number" step="0.5"></label>
+        <div class="hint" id="ed-site"></div>
+        <label>Sendeleistung [dBm]<input id="ed-tx" type="number" step="0.5"></label>
+        <label>Antennengewinn [dBi]<input id="ed-gain" type="number" step="0.1"></label>
+        <label>Kabel-/Steckerverlust [dB]<input id="ed-cable" type="number" step="0.1"></label>
+        <label>Elektr. Downtilt [°]<input id="ed-tilt" type="number" step="0.5"></label>
+        <label class="check"><input id="ed-en" type="checkbox"> aktiv (in Berechnung)</label>
+        <div class="hint" id="ed-eirp"></div>
+      </div>
+      <div class="row gap">
+        <button class="btn primary" id="ed-save">Speichern</button>
+        <button class="btn" id="ed-profile">Höhenprofil …</button>
+        <button class="btn danger" id="ed-del">Löschen</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row between"><h3>Repeater <span class="badge" id="rep-count">0</span></h3>
+        <label class="check small"><input type="checkbox" id="show-links" checked> Verbindungen</label></div>
+      <div class="bulk" id="bulk">
+        <div class="row gap small"><span>Markieren:</span><button class="btn small" id="sel-all">alle</button><button class="btn small" id="sel-view">im Kartenausschnitt</button>
+          <button class="btn small" id="sel-off">inaktive</button><button class="btn small" id="sel-none">keine</button></div>
+        <div class="row gap small" id="bulk-act" hidden><b id="sel-count"></b>
+          <button class="btn small danger" id="bulk-del">Löschen</button><button class="btn small" id="bulk-on">Aktivieren</button>
+          <button class="btn small" id="bulk-off">Deaktivieren</button><button class="btn small" id="bulk-h">Höhe …</button></div>
+      </div>
+      <input id="rep-filter" placeholder="Filtern (Name)" class="filter">
+      <div id="rep-list" class="list"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-calc" hidden>
+    <div class="card">
+      <h3>Ausleuchtung berechnen</h3>
+      <div class="form two">
+        <label>Rasterweite
+          <select id="c-res"></select></label>
+        <label>Radius je Repeater [km]<input id="c-rad" type="number" min="1" max="40" step="1"></label>
+      </div>
+      <p class="hint">Gerechnet wird das aktive Gebiet (<span id="c-area"></span>). Bereits berechnete Repeater kommen aus dem Cache – nach dem Setzen neuer Repeater wird nur das Neue gerechnet.</p>
+      <p class="hint warn" id="c-warn" hidden></p>
+      <div class="row gap"><button class="btn primary big" id="btn-calc">Ausleuchtung berechnen</button><button class="btn" id="btn-cancel" disabled>Abbrechen</button></div>
+      <div class="progress"><div id="prog"></div></div>
+      <div class="hint" id="job-msg"></div>
+      <pre id="job-log" class="log"></pre>
+    </div>
+    <div class="card">
+      <h3>Kartenebene</h3>
+      <div id="layers" class="layers"></div>
+      <label class="small">Deckkraft <input type="range" id="opacity" min="0.2" max="1" step="0.05" value="0.8"></label>
+      <div id="legend" class="legend"></div>
+    </div>
+    <div class="card" id="summary-card" hidden>
+      <h3>Zusammenfassung</h3>
+      <div id="summary"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-load" hidden>
+    <div class="card">
+      <h3>Auslastungssimulation</h3>
+      <p class="hint">Ereignisgesteuerte Simulation des MeshCore-Floodings über das berechnete Netz: Airtime, Wiederholverzögerung, Listen-before-Talk, Halbduplex, Kollisionen mit Capture-Effekt. Endgeräte werden zufällig auf Gebäude im Kreis verteilt.</p>
+      <div class="form two" id="load-form"></div>
+      <button class="btn primary" id="btn-load">Simulation starten</button>
+      <div class="hint" id="load-msg"></div>
+    </div>
+    <div class="card" id="load-res" hidden></div>
+  </section>
+
+  <section class="tab" id="tab-cal" hidden>
+    <div class="card">
+      <h3>Eigene Messungen → Modell kalibrieren</h3>
+      <div class="drop" id="cal-drop"><b>Messdateien hierher ziehen</b> oder <label class="link">auswählen<input type="file" id="cal-file" accept=".csv,.txt,.json,text/csv,application/json" multiple hidden></label>
+        <div class="hint">CSV/JSON der <a href="/mapper/" target="_blank">Funkmesh-Mapper-App</a> oder eigene CSV mit <code>lat, lon, rssi, repeater</code> (optional <code>snr, direction, height, setup, gps_accuracy</code>). Leeres <code>rssi</code> = nicht empfangen. Mehrere Dateien werden zusammen ausgewertet.</div></div>
+      <div id="cal-sets" class="list"></div>
+      <label class="check small"><input type="checkbox" id="cal-auto" checked> nach dem Hinzufügen automatisch auswerten und – wenn plausibel – übernehmen</label>
+      <div class="row gap" style="margin-top:6px"><button class="btn primary" id="btn-cal" disabled>Jetzt auswerten</button>
+        <button class="btn" id="btn-cal-mapme">+ Messdaten von mapme.sh</button></div>
+      <div class="hint" id="cal-msg"></div>
+      <details class="small"><summary>Messaufbau (für Zeilen ohne Spalte <code>setup</code>)</summary>
+      <div class="form two" style="margin-top:8px">
+        <label>Messaufbau<select id="cal-preset">
+          <option value="4">zu Fuß, Gerät am Körper (4 dB)</option><option value="8">Fahrzeug, Gerät innen (8 dB)</option>
+          <option value="0">Fahrzeug/Stativ, Außenantenne (0 dB)</option></select></label>
+        <label>Zusatzverlust [dB]<input type="number" id="cal-extra" value="4" step="0.5"></label>
+        <label>Antennengewinn Messgerät [dBi]<input type="number" id="cal-gain" value="0" step="0.1"></label>
+        <label>Messhöhe [m]<input type="number" id="cal-h" value="1.5" step="0.1"></label>
+        <label>Sendeleistung Messgerät [dBm]<input type="number" id="cal-tx" value="22" step="0.5"></label>
+        <label>Zensierungsgrenze [dB]<input type="number" id="cal-cens" value="5" step="1"></label>
+      </div>
+      <label class="check small"><input type="checkbox" id="cal-snap" checked> GPS-Punkte in Gebäuden nach draußen verschieben (≤ 10 m)</label>
+      <label class="check small"><input type="checkbox" id="cal-fit" checked> Parameter fitten (γ Bewuchs, Beugungsmodell, Pegel-Offset, σ)</label></details>
+      <label class="check small"><input type="checkbox" id="cal-show" checked> Messpunkte auf Karte</label>
+    </div>
+    <div class="card" id="cal-res" hidden></div>
+  </section>
+
+  <section class="tab" id="tab-set" hidden>
+    <div class="card"><h3>Funk (MeshCore-Preset)</h3><div class="form two" id="f-radio"></div>
+      <div class="hint" id="radio-derived"></div></div>
+    <div class="card"><h3>Endgerät (getragen)</h3><div class="form two" id="f-node"></div></div>
+    <div class="card"><h3>Umgebung &amp; Ausbreitung</h3><div class="form two" id="f-env"></div></div>
+    <div class="card"><h3>Statistik</h3><div class="form two" id="f-stats"></div></div>
+    <div class="card row gap"><button class="btn primary" id="btn-save-set">Parameter speichern</button>
+      <button class="btn" id="btn-clear-cache">Cache leeren</button></div>
+    <div class="card danger-zone"><h3>Zurücksetzen</h3>
+      <p class="hint">Setzt das aktive Gebiet komplett auf Anfang: alle Repeater, Parameter, Ergebnisse, Auslastung, Kalibrierung und Messdatensätze werden gelöscht. Die Geodaten des Gebiets bleiben erhalten.</p>
+      <label class="check small"><input type="checkbox" id="reset-cache"> auch den Rechen-Cache löschen</label>
+      <button class="btn danger" id="btn-reset">Alles zurücksetzen …</button></div>
+  </section>
+
+  <section class="tab" id="tab-info" hidden>
+    <div class="card prose" id="info"></div>
+  </section>
+  <footer class="foot" id="foot"></footer>
+</aside>
+<main id="map"></main>
+<div id="profile" hidden>
+  <div class="row between"><strong id="prof-title">Höhenprofil</strong><button class="x" id="prof-close">×</button></div>
+  <svg id="prof-svg" viewBox="0 0 900 260" preserveAspectRatio="none"></svg>
+  <div class="hint small">Gelände (inkl. Erdkrümmung, k = 4/3) · Gebäude (LoD2) · Bewuchs · Sichtlinie · 1. Fresnelzone (60 % gestrichelt)</div>
+</div>
+<script src="/static/vendor/leaflet.js"></script>
+<script src="/static/app.js?v=9"></script>
+</body>
+</html>
